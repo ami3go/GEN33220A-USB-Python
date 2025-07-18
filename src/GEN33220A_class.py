@@ -130,10 +130,10 @@ class GEN_33220A:
         self.inst.write('*RST')  # Turn off sweep mode
 
     def beep(self, delay_sec=1,  n_times = 1):
-         delay_sec = range_check(delay_sec, 0.1,5, "beep:delay_sec" )
+         delay_sec = range_check(delay_sec, 0,5, "beep:delay_sec" )
 
          for i in range(int(n_times)):
-            self.inst.write(f'SYST:BEEP')  # Turn off sweep mode
+            self.__cmd_write(f'SYST:BEEP')  # Turn off sweep mode
             time.sleep(delay_sec)
 
     def close(self):
