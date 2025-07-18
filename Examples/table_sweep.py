@@ -52,6 +52,7 @@ for item in test_parameters:
     step_freq_hz = item[2]
     step_time_sec = item[3]
     vout = item[4]
+    # gen.set_offset(round((vout*0.8),3)) # calculate offset if amp can't work with negative values 
     gen.set_voltage(vout)
     for freq in range(start_freq_hz, stop_freq_hz + step_freq_hz, step_freq_hz ):
         print(f"{datetime.datetime.now()} Set: {freq} Hz, Amp: {vout} V, time: {step_time_sec} sec, {item}")
