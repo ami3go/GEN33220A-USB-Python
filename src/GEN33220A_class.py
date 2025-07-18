@@ -1,6 +1,6 @@
-import sys
-import pyvisa # PyVisa info @ http://PyVisa.readthedocs.io/en/stable/
 import time
+
+import pyvisa # PyVisa info @ http://PyVisa.readthedocs.io/en/stable/
 
 # https://www.keysight.com/upload/cmc_upload/All/34410A_Quick_Reference.pdf
 
@@ -33,78 +33,109 @@ def range_check(val, min, max, val_name):
 class GEN_33220A:
     def __init__(self):
         self.rm = pyvisa.ResourceManager()
-        self.app = self.rm.open_resource(SCOPE_VISA_ADDRESS)
-        IDN = str(self.app.query("*IDN?"))
-        print(f': Connected to: {IDN}')
+        self.inst = self.rm.open_resource(SCOPE_VISA_ADDRESS)
+        IDN = str(self.inst.query("*IDN?"))
+        print(f'*** Connected to: {IDN}')
         ## Set Global Timeout
         ## This can be used wherever, but local timeouts are used for Arming, Triggering, and Finishing the acquisition... Thus it mostly handles IO timeouts
-        self.app.timeout = GLOBAL_TOUT
+        self.inst.timeout = GLOBAL_TOUT
 
         ## Clear the instrument bus
-        self.app.clear()
+        self.inst.clear()
+
+    def __cmd_write(self, txt_cmd):
+        self.inst.write(txt_cmd)
+
+    def __cmd_query(self, txt_cmd):
+        return_val = self.inst.query(txt_cmd)
+        return return_val
+
+    def cmd_read(self):
+        txt_cmd = "READ?"
+        tmp = self.__cmd_query(txt_cmd)
+        return tmp
+
     def conf_puls(self):
-        self.app.write("FUNCtion PULSe")
+        self.inst.write("FUNCtion PULSe")
 
     def conf_square(self):
-        self.app.write("FUNCtion SQUare")
+        self.inst.write("FUNCtion SQUare")
 
     def conf_sinus(self):
-        self.app.write("FUNCtion SINusoid")
+        self.inst.write("FUNCtion SINusoid")
 
     def conf_dc(self):
-        self.app.write("FUNCtion DC")
+        self.inst.write("FUNCtion DC")
 
 
-
-    def set_freq(self, freq):
-        if freq == "min":
-            self.app.write("FREQuency MINimum")
-        if freq == "max":
-            self.app.write("FREQuency MAXimum")
-
+    def set_freq(self, freq_hz):
+        if freq_hz == "min":
+            self.inst.write("FREQuency MINimum")
+        if freq_hz == "max":
+            self.inst.write("FREQuency MAXimum")
+        else:
+            self.inst.write(f'FREQ {freq_hz}')
     def set_voltage(self, voltage):
         voltage = range_check(voltage,-10,10,"Voltage")
 
-        self.app.write(f"VOLTage {voltage}")
+        self.inst.write(f"VOLTage {voltage}")
 
     def set_output_on(self):
-        self.app.write(f"OUTPut ON")
+        self.inst.write(f"OUTPut ON")
 
     def set_output_off(self):
-        self.app.write(f"OUTPut OFF")
+        self.inst.write(f"OUTPut OFF")
 
-    def cmd_write(self, txt_cmd):
-        self.app.write(txt_cmd)
+    def set_offset(self, offset_volt):
+        offset_volt = range_check(offset_volt,-5,5, "set offset")
+        self.inst.write(f"VOLTage:OFFSet {offset_volt}")
 
     def set_output_load(self, load_in_ohms, text_var=None):
         if load_in_ohms != 0:
             load_in_ohms = range_check(load_in_ohms,1, 10000, "Resistance")
-            self.app.write(f"OUTPut:LOAD {load_in_ohms}")
+            self.inst.write(f"OUTPut:LOAD {load_in_ohms}")
             return True
         if text_var != None:
             if text_var == "inf":
-                self.app.write(f"OUTPut:LOAD {INFinity}")
+                self.inst.write(f"OUTPut:LOAD {INFinity}")
                 return True
             if text_var == "min":
-                self.app.write(f"OUTPut:LOAD {MINimum}")
+                self.inst.write(f"OUTPut:LOAD {MINimum}")
                 return True
             if text_var == "max":
-                self.app.write(f"OUTPut:LOAD {MAXimum}")
+                self.inst.write(f"OUTPut:LOAD {MAXimum}")
                 return True
 
 
+    def set_trigger_immediate(self):
+        self.inst.write(f"TRIGger:SOURce IMMediate")
 
-    def cmd_query(self, txt_cmd):
-        return_val = self.app.query(txt_cmd)
-        return return_val
-    def cmd_read(self):
-        txt_cmd = "READ?"
-        tmp = self.cmd_query(txt_cmd)
-        return tmp
+    def trigger(self):
+        self.inst.write(f"*TRG")
+
     def measure_voltage(self):
-        return self.app.query("MEASure:VOLTage:DC? AUTO")
+        return self.inst.query("MEASure:VOLTage:DC? AUTO")
 
+    def sweep(self, start_freq, stop_freq, duration):
+        self.inst.write('SWE:STAT OFF')  # Turn off sweep mode
+        self.inst.write(f'SWE:STAR {start_freq}')
+        self.inst.write(f'SWE:STOP {stop_freq}')
+        self.inst.write(f'SWE:TIME {duration}')
+        self.inst.write('SWE:STAT ON')  # Turn on sweep mode
+
+    def stop_sweep(self):
+        self.inst.write('SWE:STAT OFF')  # Turn off sweep mode
+
+    def reset(self):
+        self.inst.write('*RST')  # Turn off sweep mode
+
+    def beep(self, delay_sec=1,  n_times = 1):
+         delay_sec = range_check(delay_sec, 0.1,5, "beep:delay_sec" )
+
+         for i in range(int(n_times)):
+            self.inst.write(f'SYST:BEEP')  # Turn off sweep mode
+            time.sleep(delay_sec)
 
     def close(self):
-        self.app.clear()
-        self.app.close()
+        self.inst.clear()
+        self.inst.close()
