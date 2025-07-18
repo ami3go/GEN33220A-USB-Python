@@ -1,13 +1,12 @@
-import GEN33220A_class
 import time
 
+import src.GEN33220A_class as gen_class
 
-gen = GEN33220A_class.GEN_33220A()
+gen = gen_class.GEN_33220A()
 
 #gen.conf_puls()
 time.sleep(2)
-gen.conf_square()
-gen.set_freq("min")
+gen.conf_sinus()
 vout = 2.000
 gen.set_voltage(vout)
 gen.set_output_load(100)
